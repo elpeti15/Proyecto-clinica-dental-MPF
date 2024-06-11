@@ -1,0 +1,5 @@
+laura labiano#622741852#Calle bautista 2#False
+mario martinez#147852369#calle mario#True
+miguel perez#633078200#Calle bautista aznar#True
+pepa ferrer#645789632#av valencia n23#False
+Rodrigo López#258963147#Calle rodrigo#False
