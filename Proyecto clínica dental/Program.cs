@@ -1,11 +1,10 @@
 ﻿using Proyecto_clínica_dental;
 using System;
 using System.Collections.Generic;
-class MenuPrincipal
+class GestorClinicaPrincipal
 {
     static void Main(string[] args)
     {
-        GestorDePacientes.CargarPacientes();
         GestorDeEmpleados.CargarEmpleados();
         List<Empleado> empleados = GestorDeEmpleados.listaDeEmpleados;
         //Pantalla de login

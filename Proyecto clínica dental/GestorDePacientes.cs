@@ -2,7 +2,9 @@
 
 class GestorDePacientes
 {
-    public static List<Paciente> listaDePacientes = new List<Paciente>();
+    public static ListaDePacientes lista = new ListaDePacientes();
+    
+    //public static List<Paciente> listaDePacientes = new List<Paciente>();
     public static void Lanzar()
     {
         int indice = 0;
@@ -14,17 +16,15 @@ class GestorDePacientes
             switch (opcion)
             {
                 case ConsoleKey.LeftArrow: 
-                    indice = (indice - 1 + listaDePacientes.Count) % listaDePacientes.Count; 
+                    indice = (indice - 1 + lista.CantidadDePacientes()) % lista.CantidadDePacientes(); 
                     break;
 
                 case ConsoleKey.RightArrow:
-                    indice = (indice + 1) % listaDePacientes.Count; 
+                    indice = (indice + 1) % lista.CantidadDePacientes(); 
                     break;
 
                 case ConsoleKey.D1: 
-                    Anyadir(listaDePacientes.Count);
-                    listaDePacientes.Sort();
-                    GuardarPacientes(); 
+                    Anyadir(lista.CantidadDePacientes());
                     break;
 
                 case ConsoleKey.D2: 
@@ -37,13 +37,11 @@ class GestorDePacientes
                     break;
 
                 case ConsoleKey.D4: 
-                    Modificar(indice); 
-                    GuardarPacientes(); 
+                    Modificar(indice);  
                     break;
 
                 case ConsoleKey.D5: 
                     Eliminar(indice); 
-                    GuardarPacientes(); 
                     break;
                 case ConsoleKey.S: salir = true; break;
                 default:
@@ -55,7 +53,7 @@ class GestorDePacientes
 
     private static ConsoleKey PantallaPacientes(int indice)
     {
-        if (listaDePacientes.Count == 0)
+        if (lista.CantidadDePacientes() == 0)
         {
             Pantalla.Ventana(0, 0, 80, 25, "azul");
             Pantalla.Escribir(2, 2, "No hay pacientes registrados", "blanco");
@@ -71,18 +69,18 @@ class GestorDePacientes
 
         Pantalla.Ventana(0, 0, 80, 25, "azul");
         Pantalla.Escribir(2, 2, "Pacientes (actual: " 
-            + (indice + 1) + "/" + listaDePacientes.Count + ")", "blanco");
+            + (indice + 1) + "/" + lista.CantidadDePacientes() + ")", "blanco");
         Pantalla.Escribir(30, 2, fecha, "gris");
         Pantalla.Escribir(50, 2, hora, "gris");
 
         Pantalla.Escribir(2, 6, "Nombre completo: ", "blanco");
-        Pantalla.Escribir(19, 6, listaDePacientes[indice].NombreCompleto, "gris");
+        Pantalla.Escribir(19, 6, lista.Obtener(indice).NombreCompleto, "gris");
         Pantalla.Escribir(2, 8, "Teléfono: ", "blanco");
-        Pantalla.Escribir(19, 8, listaDePacientes[indice].Telefono, "gris");
+        Pantalla.Escribir(19, 8, lista.Obtener(indice).Telefono, "gris");
         Pantalla.Escribir(2, 10, "Dirección: ", "blanco");
-        Pantalla.Escribir(19, 10, listaDePacientes[indice].Direccion, "gris");
+        Pantalla.Escribir(19, 10, lista.Obtener(indice).Direccion, "gris");
         Pantalla.Escribir(2, 12, "Alergia: ", "blanco");
-        if (listaDePacientes[indice].Alergia == true)
+        if (lista.Obtener(indice).Alergia == true)
         {
             alergia2 = "Con alergia";
         }
@@ -114,7 +112,7 @@ class GestorDePacientes
         string hora = ahora.ToString("t");
         Pantalla.Ventana(0, 0, 80, 25, "azul");
         Pantalla.Escribir(2, 2, "Pacientes (actual: "
-            + (indice + 1) + "/" + listaDePacientes.Count + ")", "blanco");
+            + (indice + 1) + "/" + lista.CantidadDePacientes() + ")", "blanco");
         Pantalla.Escribir(30, 2, fecha, "gris");
         Pantalla.Escribir(50, 2, hora, "gris");
 
@@ -154,7 +152,7 @@ class GestorDePacientes
         string confirmacion = Console.ReadLine();
         if (confirmacion == "1")
         {
-            listaDePacientes.Add(new Paciente(nombre, telefono, direccion, alergia2));
+            lista.Anyadir(new Paciente(nombre, telefono, direccion, alergia2));
             Pantalla.Escribir(2, 16, "Paciente añadido correctamente", "verde");
             Console.ReadKey();
         }
@@ -179,7 +177,7 @@ class GestorDePacientes
         Pantalla.Escribir(50, 2, hora, "gris");
 
         string textoBuscar = Pantalla.PedirNormal(2, 6, "Texto a buscar: ");
-        string[] contienen = EncontrarPacientesQueContienen(textoBuscar);
+        string[] contienen = lista.ObtenerPacientes(textoBuscar);
         if (contienen.Length > 0)
         {
             for (int i = 0; i < contienen.Length; i++)
@@ -204,19 +202,19 @@ class GestorDePacientes
 
         Pantalla.Ventana(0, 0, 80, 25, "azul");
         Pantalla.Escribir(2, 2, "Pacientes (actual: "
-            + (indice + 1) + "/" + listaDePacientes.Count + ")", "blanco");
+            + (indice + 1) + "/" + lista.CantidadDePacientes() + ")", "blanco");
         Pantalla.Escribir(30, 2, fecha, "gris");
         Pantalla.Escribir(50, 2, hora, "gris");
 
         Pantalla.Escribir(2, 6, "Nombre completo: ", "blanco");
-        string nombre = Pantalla.Pedir(19, 6, 30, listaDePacientes[indice].NombreCompleto);
+        string nombre = Pantalla.Pedir(19, 6, 30, lista.Obtener(indice).NombreCompleto);
         Pantalla.Escribir(2, 8, "Teléfono: ", "blanco");
-        string telefono = Pantalla.Pedir(19, 8, 9, listaDePacientes[indice].Telefono);
+        string telefono = Pantalla.Pedir(19, 8, 9, lista.Obtener(indice).Telefono);
         Pantalla.Escribir(2, 10, "Dirección: ", "blanco");
-        string direccion = Pantalla.Pedir(19, 10, 30, listaDePacientes[indice].Direccion);
+        string direccion = Pantalla.Pedir(19, 10, 30, lista.Obtener(indice).Direccion);
         Pantalla.Escribir(2, 12, "Alergia (s/n): ", "blanco");
 
-        if (listaDePacientes[indice].Alergia == true)
+        if (lista.Obtener(indice).Alergia == true)
             alergia = "Con alergia";
         else
             alergia = "Sin alergia";
@@ -235,10 +233,8 @@ class GestorDePacientes
         string confirmacion = Console.ReadLine();
         if (confirmacion == "1")
         {
-            listaDePacientes[indice].NombreCompleto = nombre;
-            listaDePacientes[indice].Telefono = telefono;
-            listaDePacientes[indice].Direccion = direccion;
-            listaDePacientes[indice].Alergia = alergia3;
+            lista.Modificar(indice, nombre, telefono, direccion, alergia3);
+            
             Pantalla.Escribir(2, 16, "Paciente modificado correctamente", "verde");
             Console.ReadKey();
         }
@@ -250,87 +246,9 @@ class GestorDePacientes
             (2, 14, "¿Está seguro de borrar el paciente? (s/n)").ToLower();
         if (respuesta == "s")
         {
-            listaDePacientes.RemoveAt(indice);
+            lista.Eliminar(indice);
             Pantalla.Escribir(2, 16, "Paciente eliminado con éxito", "verde");
             Console.ReadKey();
         }      
-    }
-
-    private static string[] EncontrarPacientesQueContienen(string texto)
-    {
-        List<string> listaEncontrados = new List<string>();
-        for (int i = 0; i < listaDePacientes.Count; i++)
-        {
-            if (listaDePacientes[i].Contiene(texto))
-            {
-                listaEncontrados.Add((i + 1) + "- " + listaDePacientes[i].ToString());
-            }
-        }
-        return listaEncontrados.ToArray();
-    }
-
-    private static void GuardarPacientes()
-    {
-        try
-        {
-            StreamWriter f = File.CreateText("Pacientes.txt");
-            foreach (Paciente paciente in listaDePacientes)
-            {
-                f.Write(paciente.NombreCompleto + "#");
-                f.Write(paciente.Telefono + "#");
-                f.Write(paciente.Direccion + "#");
-                f.WriteLine(paciente.Alergia);
-            }
-            f.Close();
-        }
-        catch (PathTooLongException)
-        {
-            Console.WriteLine("La ruta del fichero es demasiado larga.");
-        }
-        catch (IOException e)
-        {
-            Console.WriteLine("Error de escritura: " + e.Message);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error general: " + e.Message);
-        }
-    }
-
-    public static void CargarPacientes()
-    {
-        if (File.Exists("Pacientes.txt"))
-        {
-            try
-            {
-                string linea;
-                StreamReader f = File.OpenText("Pacientes.txt");
-                do
-                {
-                    linea = f.ReadLine();
-                    if (linea != null)
-                    {
-                        string[] trozos = linea.Split('#');
-
-                        Paciente paciente = new Paciente(trozos[0], trozos[1],
-                            trozos[2], Convert.ToBoolean(trozos[3]));
-                        listaDePacientes.Add(paciente);
-                    }
-                } while (linea != null);
-                f.Close();
-            }
-            catch (PathTooLongException)
-            {
-                Console.WriteLine("La ruta del fichero es demasiado larga.");
-            }
-            catch (IOException e)
-            {
-                Console.WriteLine("Error de lectura: " + e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error general: " + e.Message);
-            }
-        }
     }
 }

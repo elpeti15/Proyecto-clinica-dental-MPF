@@ -7,7 +7,7 @@ class GestorDeCitas
 
     public static void Lanzar()
     {
-        int indice = 0;
+        int indice = 0, contador = 0;
         bool salir = false;
         do
         {
@@ -35,7 +35,12 @@ class GestorDeCitas
                     break;
 
                 case ConsoleKey.D3:
-                    VerHorariosOcupados(indice);
+                    ConsoleKey opcion2 = VerHorariosOcupados(contador);
+                    if (opcion2 == ConsoleKey.LeftArrow && contador >= 13)
+                        contador -= 13;
+                    
+                    else if (opcion2 == ConsoleKey.RightArrow && contador+13 < listaDeCitas.Count)      
+                        contador += 13;
                     break;
 
                 case ConsoleKey.D4:
@@ -96,7 +101,7 @@ class GestorDeCitas
     private static void Anyadir(int indice)
     {
         string idCita = "", nombreP = "", nombreD = "", valoracion = "",
-            dProblema = "", tratamiento = ""; ;
+            dProblema = "", tratamiento = ""; 
         DateTime fecha = new DateTime();
         Doctor doctor = null;
         Paciente paciente = null;
@@ -152,23 +157,27 @@ class GestorDeCitas
         return indice;
     }
 
-    private static void VerHorariosOcupados(int indice)
+    private static ConsoleKey VerHorariosOcupados(int contador)
     {
         DateTime ahora = DateTime.Now;
         string fecha = ahora.ToString("d");
         string hora = ahora.ToString("t");
         Pantalla.Ventana(0, 0, 80, 25, "azul");
-        Pantalla.Escribir(2, 2, "Horarios disponibles", "blanco");
+        Pantalla.Escribir(2, 2, "Horario laboral (08:00 - 14:00) / Duración cita (30' - 60') ", "blanco");
         Pantalla.Escribir(30, 2, fecha, "gris");
         Pantalla.Escribir(50, 2, hora, "gris");
-
-        for(int i = 0; i < listaDeCitas.Count; i++)
-        {
-            Pantalla.Escribir(2, 6, listaDeCitas[i].Fecha.ToString("g"), "amarillo");
-        }
         Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
 
-
+        int maxItems = Math.Min(13, listaDeCitas.Count - contador);
+        for (int i = 0; i < maxItems; i++)
+        {
+            Pantalla.Escribir(2, i+6, "- "+listaDeCitas[i+contador].Fecha.ToString("g"), "amarillo");
+        }
+        Pantalla.Escribir(25, 22, "<- Anteriores fechas", "blanco");
+        Pantalla.Escribir(45, 22, "-> Siguientes fechas", "blanco");
+        Pantalla.Escribir(65, 22, "S- Volver", "blanco");
+        ConsoleKeyInfo tecla = Console.ReadKey(true);
+        return tecla.Key;
     }
 
     private static void PedirDatos1aCita(ref string valoracionB)
@@ -217,7 +226,7 @@ class GestorDeCitas
         int minutos = Convert.ToInt32(Pantalla.PedirNormal(62, 12, "Minutos (mm): "));
 
         while ((dia <= 0 || dia > 31) || (mes <= 0 || mes > 12) || (anyo < 2024 || anyo <= 0)
-            || (hora < 8 || hora >= 21) || (minutos < 0 || minutos > 59))
+            || (hora < 8 || hora >= 14) || (minutos < 0 || minutos > 59))
         {
             Pantalla.Escribir(2, 14, "Fecha u hora incorrectas. Inténtelo de nuevo.", "rojo");
             dia = Convert.ToInt32(Pantalla.PedirNormal(2, 12, "Día (dd): "));
@@ -295,11 +304,11 @@ class GestorDeCitas
             if (e is Doctor d && d.Nombre.ToLower().Contains(nombreD.ToLower()))
                 doctor = d;
         }
-        foreach (Paciente p in GestorDePacientes.listaDePacientes)
+        /*foreach (Paciente p in GestorDePacientes.listaDePacientes)
         {
             if (p.NombreCompleto.ToLower().Contains(nombreP.ToLower()))
                 paciente = p;
-        }
+        }*/
     }
 
     private static void GuardarCitas()
