@@ -4,7 +4,6 @@ class GestorDePacientes
 {
     public static ListaDePacientes lista = new ListaDePacientes();
     
-    //public static List<Paciente> listaDePacientes = new List<Paciente>();
     public static void Lanzar()
     {
         int indice = 0;
@@ -160,9 +159,13 @@ class GestorDePacientes
 
     private static int Numero()
     {
-        int indice = Convert.ToInt32(Pantalla.PedirNormal
+        int indice = 0;
+        do
+        {
+            indice = Convert.ToInt32(Pantalla.PedirNormal
             (2, 16, "Introduzca el número de registro ")) - 1;
-
+        } while (indice > lista.CantidadDePacientes() || indice < 0);
+        
         return indice;
     }
 
@@ -189,6 +192,7 @@ class GestorDePacientes
         else
         {
             Pantalla.Escribir(2, 8, "No se han encontrado coincidencias.", "rojo");
+            Console.ReadKey();
         }
     }
 

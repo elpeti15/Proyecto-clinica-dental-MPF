@@ -3,59 +3,64 @@ using System.Numerics;
 
 class GestorDeCitas
 {
-    private static List<Cita> listaDeCitas = new List<Cita>();
-
+    public static ListaDeCitas lista = new ListaDeCitas();
+    //creamos la lista secundaria para manejar la pantalla y solo muestre las citas confirmadas
     public static void Lanzar()
     {
+        List<Cita> citasConfirmadas = lista.ListaCitasConfirmadas(); //lista secundaria de las citas (no canceladas)
         int indice = 0, contador = 0;
-        bool salir = false;
+        bool salir = false, ocultar = true;
         do
         {
-            ConsoleKey opcion = PantallaCitas(indice); //devuelve la tecla que ha pulsado
-
+            ConsoleKey opcion = PantallaCitas(indice, citasConfirmadas, ocultar);
             switch (opcion)
             {
                 case ConsoleKey.LeftArrow:
-                    indice = (indice - 1 + listaDeCitas.Count) % listaDeCitas.Count;
+                    if (ocultar == false)
+                        indice = (indice - 1 + lista.CantidadDeCitas()) % lista.CantidadDeCitas();
+                    else
+                        indice = (indice - 1 + citasConfirmadas.Count) % citasConfirmadas.Count;
                     break;
-
                 case ConsoleKey.RightArrow:
-                    indice = (indice + 1) % listaDeCitas.Count;
+                    if (ocultar == false)
+                        indice = (indice + 1) % lista.CantidadDeCitas();
+                    else
+                        indice = (indice + 1) % citasConfirmadas.Count;
                     break;
-
                 case ConsoleKey.D1:
-                    Anyadir(listaDeCitas.Count);
-                    listaDeCitas.Sort();
-                    GuardarCitas();
-                    break;
-
+                    Anyadir(lista.CantidadDeCitas(), ocultar, citasConfirmadas); break;
                 case ConsoleKey.D2:
-                    indice = Numero();
-                    PantallaCitas(indice);
-                    break;
-
+                    if (ocultar == false)
+                        indice = Numero(lista.CantidadDeCitas());
+                    else
+                        indice = Numero(citasConfirmadas.Count);
+                    PantallaCitas(indice, citasConfirmadas, ocultar); break;
                 case ConsoleKey.D3:
-                    ConsoleKey opcion2 = VerHorariosOcupados(contador);
-                    if (opcion2 == ConsoleKey.LeftArrow && contador >= 13)
-                        contador -= 13;
-                    
-                    else if (opcion2 == ConsoleKey.RightArrow && contador+13 < listaDeCitas.Count)      
-                        contador += 13;
-                    break;
+                    ConsoleKey opcion2;
+                    do
+                    {
+                        opcion2 = VerHorariosOcupados(contador, citasConfirmadas);
+                        if (opcion2 == ConsoleKey.LeftArrow && contador >= 13)
+                            contador -= 13;
 
+                        else if (opcion2 == ConsoleKey.RightArrow && contador + 13 < citasConfirmadas.Count)
+                            contador += 13;
+
+                        else if (opcion2 == ConsoleKey.LeftArrow && contador < 13)
+                            contador = 0;
+
+                        else if (opcion2 == ConsoleKey.RightArrow && contador + 13 >= citasConfirmadas.Count)
+                            contador = citasConfirmadas.Count - (citasConfirmadas.Count % 13);
+
+                    } while (opcion2 != ConsoleKey.S); break;
                 case ConsoleKey.D4:
-                    //Buscar();
-                    break;
-
+                    Buscar(ocultar); break;
                 case ConsoleKey.D5:
-                    //Modificar(indice);
-                    //GuardarPacientes();
-                    break;
-
+                    Modificar(indice, ocultar, citasConfirmadas); break;
                 case ConsoleKey.D6:
-                    //Eliminar(indice);
-                    //GuardarPacientes();
-                    break;
+                    Cancelar(indice); break;
+                case ConsoleKey.D7:
+                    Configuracion(ref ocultar); break;
                 case ConsoleKey.S: salir = true; break;
                 default:
                     Pantalla.Escribir(25, 15, "Opción no válida", "rojo");
@@ -64,9 +69,10 @@ class GestorDeCitas
         } while (!salir);
     }
 
-    private static ConsoleKey PantallaCitas(int indice)
+    private static ConsoleKey PantallaCitas(int indice, List<Cita> citasConfirmadas,
+        bool ocultar)
     {
-        if (listaDeCitas.Count == 0)
+        if (lista.CantidadDeCitas() == 0 || citasConfirmadas.Count == 0)
         {
             Pantalla.Ventana(0, 0, 80, 25, "azul");
             Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
@@ -76,37 +82,105 @@ class GestorDeCitas
             ConsoleKeyInfo tecla1 = Console.ReadKey(true);
             return tecla1.Key;
         }
-        RellenoMenu(indice);
-        Pantalla.Escribir(2, 6, "ID cita: ", "blanco");
-        Pantalla.Escribir(20, 6, listaDeCitas[indice].IdCita, "gris");
-        Pantalla.Escribir(2, 8, "Paciente: ", "blanco");
-        Pantalla.Escribir(20, 8, listaDeCitas[indice].Paciente.NombreCompleto, "gris");
-        Pantalla.Escribir(2, 10, "Doctor: ", "blanco");
-        Pantalla.Escribir(20, 10, listaDeCitas[indice].Doctor.Nombre, "gris");
-        Pantalla.Escribir(2, 12, "Fecha: ", "blanco");
-        Pantalla.Escribir(20, 12, listaDeCitas[indice].Fecha.ToString("g"), "gris");
-
-        if (listaDeCitas[indice] is CitaPrimera)
-        {
-            Pantalla1aCita(indice);
-        }
-        else if (listaDeCitas[indice] is CitaNormal)
-        {
-            PantallaCitaNormal(indice);
-        } 
+        RellenoMenu(indice, ocultar, citasConfirmadas);
+        if (ocultar == false)
+            PantallaCitasTotal(indice);
+        else
+            PantallaCitasConfirmadas(indice, citasConfirmadas);
         ConsoleKeyInfo tecla = Console.ReadKey(true);
         return tecla.Key;
     }
 
-    private static void Anyadir(int indice)
+    private static void PantallaCitasTotal(int indice)
+    {
+        if(lista.Obtener(indice).Cancelada == true)
+        {
+            Pantalla.Escribir(2, 6, "ID cita: ", "rojo");
+            Pantalla.Escribir(2, 8, "Paciente: ", "rojo");
+            Pantalla.Escribir(2, 10, "Doctor: ", "rojo");
+            Pantalla.Escribir(2, 12, "Fecha: ", "rojo");
+            Pantalla.Escribir(2, 14, "Estado: ", "rojo");
+        }
+        else
+        {
+            Pantalla.Escribir(2, 6, "ID cita: ", "blanco");
+            Pantalla.Escribir(2, 8, "Paciente: ", "blanco");
+            Pantalla.Escribir(2, 10, "Doctor: ", "blanco");
+            Pantalla.Escribir(2, 12, "Fecha: ", "blanco");
+            Pantalla.Escribir(2, 14, "Estado: ", "blanco");
+        }
+        Pantalla.Escribir(20, 6, lista.Obtener(indice).IdCita, "gris");   
+        Pantalla.Escribir(20, 8, lista.Obtener(indice).Paciente.NombreCompleto, "gris");      
+        Pantalla.Escribir(20, 10, lista.Obtener(indice).Doctor.Nombre, "gris");   
+        Pantalla.Escribir(20, 12, lista.Obtener(indice).Fecha.ToString("g"), "gris");      
+        Pantalla.Escribir(20, 14, lista.Obtener(indice).Cancelada ? "Cancelada" : "Confirmada", "gris");
+
+        if (lista.Obtener(indice) is CitaPrimera)
+        {
+            if (lista.Obtener(indice).Cancelada == true)
+                Pantalla.Escribir(2, 16, "Valoración bucal: ", "rojo");
+            else
+                Pantalla.Escribir(2, 16, "Valoración bucal: ", "blanco");
+            if (lista.Obtener(indice) is CitaPrimera citaPrimera)
+                Pantalla.Escribir(20, 16, citaPrimera.ValoracionBucal, "gris");
+        }
+        else if (lista.Obtener(indice) is CitaNormal)
+        {
+            if (lista.Obtener(indice).Cancelada == true)
+                Pantalla.Escribir(2, 16, "Problemática: ", "rojo");
+            else
+                Pantalla.Escribir(2, 16, "Problemática: ", "blanco");
+            if (lista.Obtener(indice) is CitaNormal citaNormal)
+                Pantalla.Escribir(20, 16, citaNormal.DescripcionProblema, "gris");
+            if (lista.Obtener(indice).Cancelada == true)
+                Pantalla.Escribir(2, 18, "Tratamiento: ", "rojo");
+            else
+                Pantalla.Escribir(2, 18, "Tratamiento: ", "blanco");
+            if (lista.Obtener(indice) is CitaNormal citaNormal2)
+                Pantalla.Escribir(20, 18, citaNormal2.Tratamiento, "gris");
+        }
+    }
+
+    private static void PantallaCitasConfirmadas(int indice, List<Cita> citasConfirmadas)
+    {
+        Pantalla.Escribir(2, 6, "ID cita: ", "blanco");
+        Pantalla.Escribir(20, 6, citasConfirmadas[indice].IdCita, "gris");
+        Pantalla.Escribir(2, 8, "Paciente: ", "blanco");
+        Pantalla.Escribir(20, 8, citasConfirmadas[indice].Paciente.NombreCompleto, "gris");
+        Pantalla.Escribir(2, 10, "Doctor: ", "blanco");
+        Pantalla.Escribir(20, 10, citasConfirmadas[indice].Doctor.Nombre, "gris");
+        Pantalla.Escribir(2, 12, "Fecha: ", "blanco");
+        Pantalla.Escribir(20, 12, citasConfirmadas[indice].Fecha.ToString("g"), "gris");
+        Pantalla.Escribir(2, 14, "Estado: ", "blanco");
+        Pantalla.Escribir(20, 14, citasConfirmadas[indice].Cancelada ? "Cancelada" : "Confirmada", "gris");
+
+        if (citasConfirmadas[indice] is CitaPrimera)
+        {
+            Pantalla.Escribir(2, 16, "Valoración bucal: ", "blanco");
+            if (citasConfirmadas[indice] is CitaPrimera citaPrimera)
+                Pantalla.Escribir(20, 16, citaPrimera.ValoracionBucal, "gris");
+        }
+        else if (citasConfirmadas[indice] is CitaNormal)
+        {
+            Pantalla.Escribir(2, 16, "Problemática: ", "blanco");
+            if (citasConfirmadas[indice] is CitaNormal citaNormal)
+                Pantalla.Escribir(20, 16, citaNormal.DescripcionProblema, "gris");
+
+            Pantalla.Escribir(2, 18, "Tratamiento: ", "blanco");
+            if (citasConfirmadas[indice] is CitaNormal citaNormal2)
+                Pantalla.Escribir(20, 18, citaNormal2.Tratamiento, "gris");
+        }
+    }
+
+    private static void Anyadir(int indice, bool ocultar, List<Cita> citasConfirmadas)
     {
         string idCita = "", nombreP = "", nombreD = "", valoracion = "",
-            dProblema = "", tratamiento = ""; 
+            dProblema = "", tratamiento = "";
         DateTime fecha = new DateTime();
         Doctor doctor = null;
         Paciente paciente = null;
 
-        RellenoCabecera(indice);
+        RellenoCabecera(indice, ocultar, citasConfirmadas);
         string respuesta = Pantalla.PedirNormal(2, 6, "Es la primera cita del paciente? (s/n) ").ToLower();
         while (respuesta != "s" && respuesta != "n")
         {
@@ -116,7 +190,7 @@ class GestorDeCitas
         {
             PedirDatosGeneral(ref idCita, ref nombreP, ref nombreD, ref fecha);
             PedirDatos1aCita(ref valoracion);
-            ConvertirPacientesYDoctor(ref nombreP, ref nombreD, ref doctor, ref paciente);
+            lista.ConvertirPacientesYDoctor(ref nombreP, ref nombreD, ref doctor, ref paciente);
 
             Pantalla.Escribir(2, 22, "1- Confirmar", "blanco");
             Pantalla.Escribir(25, 22, "S- Volver", "blanco");
@@ -124,8 +198,8 @@ class GestorDeCitas
             string confirmacion = Console.ReadLine();
             if (confirmacion == "1")
             {
-                listaDeCitas.Add(new CitaPrimera(idCita, paciente, doctor,
-                    fecha, valoracion));
+                lista.Anyadir(new CitaPrimera(idCita, paciente, doctor,
+                    fecha, false, valoracion));
                 Pantalla.Escribir(2, 16, "Primera cita añadida correctamente", "verde");
                 Console.ReadKey();
             }
@@ -134,50 +208,188 @@ class GestorDeCitas
         {
             PedirDatosGeneral(ref idCita, ref nombreP, ref nombreD, ref fecha);
             PedirDatosCitaNormal(ref dProblema, ref tratamiento);
-            ConvertirPacientesYDoctor(ref nombreP, ref nombreD, ref doctor, ref paciente);
+            lista.ConvertirPacientesYDoctor(ref nombreP, ref nombreD, ref doctor, ref paciente);
 
             Pantalla.Escribir(2, 22, "1- Confirmar", "blanco");
             Pantalla.Escribir(25, 22, "S- Volver", "blanco");
             string confirmacion = Console.ReadLine();
             if (confirmacion == "1")
             {
-                listaDeCitas.Add(new CitaNormal(idCita, paciente, doctor,
-                    fecha, dProblema, tratamiento));
-                Pantalla.Escribir(2, 16, "Cita añadida correctamente", "verde");
+                lista.Anyadir(new CitaNormal(idCita, paciente, doctor,
+                    fecha, false, dProblema, tratamiento));
+                Pantalla.Escribir(2, 18, "Cita añadida correctamente", "verde");
                 Console.ReadKey();
             }
         }
     }
 
-    private static int Numero()
+    private static int Numero(int totalCitas)
     {
-        int indice = Convert.ToInt32(Pantalla.PedirNormal
+        int indice = 0;
+        do
+        {
+            indice = Convert.ToInt32(Pantalla.PedirNormal
             (2, 18, "Introduzca el número de registro ")) - 1;
+
+        } while (indice > totalCitas || indice < 0);
 
         return indice;
     }
 
-    private static ConsoleKey VerHorariosOcupados(int contador)
+    private static ConsoleKey VerHorariosOcupados(int contador, List<Cita> citasConfirmadas)
     {
         DateTime ahora = DateTime.Now;
         string fecha = ahora.ToString("d");
         string hora = ahora.ToString("t");
         Pantalla.Ventana(0, 0, 80, 25, "azul");
-        Pantalla.Escribir(2, 2, "Horario laboral (08:00 - 14:00) / Duración cita (30' - 60') ", "blanco");
-        Pantalla.Escribir(30, 2, fecha, "gris");
-        Pantalla.Escribir(50, 2, hora, "gris");
+        Pantalla.Escribir(2, 2, "Horario laboral (08:00 - 16:00) / Duración cita (30') ", "blanco");
+        Pantalla.Escribir(57, 2, fecha, "gris");
+        Pantalla.Escribir(71, 2, hora, "gris");
         Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
+        string texto = "Fechas de las citas confirmadas: ";
+        Pantalla.Escribir((78 - texto.Length) / 2, 4, texto, "blanco");
 
-        int maxItems = Math.Min(13, listaDeCitas.Count - contador);
+        int maxItems = Math.Min(13, citasConfirmadas.Count - contador);
         for (int i = 0; i < maxItems; i++)
         {
-            Pantalla.Escribir(2, i+6, "- "+listaDeCitas[i+contador].Fecha.ToString("g"), "amarillo");
+            Pantalla.Escribir(30, i + 6, "- " + citasConfirmadas[i + contador].Fecha.ToString("g"), "amarillo");
         }
-        Pantalla.Escribir(25, 22, "<- Anteriores fechas", "blanco");
-        Pantalla.Escribir(45, 22, "-> Siguientes fechas", "blanco");
-        Pantalla.Escribir(65, 22, "S- Volver", "blanco");
+        Pantalla.Escribir(5, 22, "<- Anteriores fechas", "blanco");
+        Pantalla.Escribir(30, 22, "-> Siguientes fechas", "blanco");
+        Pantalla.Escribir(55, 22, "S- Volver", "blanco");
         ConsoleKeyInfo tecla = Console.ReadKey(true);
         return tecla.Key;
+    }
+
+    private static void Buscar(bool ocultar)
+    {
+        DateTime ahora = DateTime.Now;
+        string fecha = ahora.ToString("d");
+        string hora = ahora.ToString("t");
+        Pantalla.Ventana(0, 0, 80, 25, "azul");
+        Pantalla.Escribir(2, 2, "Búsqueda de citas: ", "blanco");
+        Pantalla.Escribir(57, 2, fecha, "gris");
+        Pantalla.Escribir(71, 2, hora, "gris");
+
+        string textoBuscar = Pantalla.PedirNormal(2, 6, "Texto a buscar: ");
+        if (ocultar == true)
+        {
+            string[] contienen = lista.ObtenerCitasConfirmadas(textoBuscar);
+            if (contienen.Length > 0)
+            {
+                for (int i = 0; i < contienen.Length; i++)
+                {
+                    Pantalla.Escribir(5, (8 + i), contienen[i], "gris");
+                }
+                Console.ReadKey();
+            }
+            else
+            {
+                Pantalla.Escribir(2, 8, "No se han encontrado coincidencias.", "rojo");
+                Console.ReadKey();
+            }
+        }
+        else
+        {
+            string[] contienen = lista.ObtenerCitasTotales(textoBuscar);
+            if (contienen.Length > 0)
+            {
+                for (int i = 0; i < contienen.Length; i++)
+                {
+                    if (contienen[i].Contains("true"))
+                        Pantalla.Escribir(5, (8 + i), contienen[i], "rojo");
+                    else
+                        Pantalla.Escribir(5, (8 + i), contienen[i], "gris");
+                }
+                Console.ReadKey();
+            }
+            else
+            {
+                Pantalla.Escribir(2, 8, "No se han encontrado coincidencias.", "rojo");
+            }
+        }
+    }
+
+    private static void Modificar(int indice, bool ocultar, List<Cita> citasConfirmadas)
+    {
+        string valoracion = "", problematica = "", tratamiento = "";
+        RellenoCabecera(indice, ocultar, citasConfirmadas);
+
+        Pantalla.Escribir(2, 6, "ID cita: ", "blanco"); //no se debe modificar (PK)
+        Pantalla.Escribir(19, 6, lista.Obtener(indice).IdCita, "gris");
+        Pantalla.Escribir(2, 6, "Paciente: ", "blanco");
+        string paciente = Pantalla.Pedir(19, 6, 25, lista.Obtener(indice).Paciente.NombreCompleto);
+        Pantalla.Escribir(2, 8, "Doctor: ", "blanco");
+        string doctor = Pantalla.Pedir(19, 8, 25, lista.Obtener(indice).Doctor.Nombre);
+        Pantalla.Escribir(2, 10, "Fecha: ", "blanco");
+        string fecha = Pantalla.Pedir(19, 10, 16, lista.Obtener(indice).Fecha.ToString("g"));
+
+
+        if (lista.Obtener(indice) is CitaPrimera citaPrimera)
+        {
+            Pantalla.Escribir(2, 12, "Valoración: ", "blanco");
+            valoracion = Pantalla.Pedir(19, 12, 25, citaPrimera.ValoracionBucal);
+        }
+        else if (lista.Obtener(indice) is CitaNormal citaNormal)
+        {
+            Pantalla.Escribir(2, 12, "Problemática: ", "blanco");
+            problematica = Pantalla.Pedir(19, 12, 25, citaNormal.DescripcionProblema);
+            Pantalla.Escribir(2, 14, "Tratamiento: ", "blanco");
+            tratamiento = Pantalla.Pedir(19, 14, 25, citaNormal.Tratamiento);
+        }
+
+        Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
+        Pantalla.Escribir(2, 22, "1- Confirmar", "blanco");
+        Pantalla.Escribir(25, 22, "S- Volver", "blanco");
+
+        string confirmacion = Console.ReadLine();
+        if (confirmacion == "1" && (lista.Obtener(indice) is CitaPrimera))
+        {
+            lista.Modificar1aCita(indice, paciente, doctor, fecha, valoracion); //revisar
+            Pantalla.Escribir(2, 16, "Paciente modificado correctamente", "verde");
+            Console.ReadKey();
+        }
+        else if (confirmacion == "1" && (lista.Obtener(indice) is CitaNormal))
+        {
+            lista.ModificarCitaNormal(indice, paciente, doctor, fecha, problematica, tratamiento);
+            Pantalla.Escribir(2, 16, "Paciente modificado correctamente", "verde");
+            Console.ReadKey();
+        }
+    }
+
+    private static void Cancelar(int indice)
+    {
+        MostrarAviso(indice);
+    }
+
+    private static void Configuracion(ref bool ocultar)
+    {
+        DateTime ahora = DateTime.Now;
+        string fecha = ahora.ToString("d");
+        string hora = ahora.ToString("t");
+        Pantalla.Ventana(0, 0, 80, 25, "azul");
+        Pantalla.Escribir(2, 2, "Ajustes de configuración: ", "blanco");
+        Pantalla.Escribir(57, 2, fecha, "gris");
+        Pantalla.Escribir(71, 2, hora, "gris");
+
+        Pantalla.Escribir(2, 6, "Apariencia: ", "blanco");
+        Pantalla.Escribir(2, 8, "1- Ocultar citas canceladas (por defecto)", "gris");
+        Pantalla.Escribir(2, 10, "2- Mostrar citas canceladas", "gris");
+        Pantalla.Escribir(2, 12, "S- Volver", "gris");
+
+        string confirmacion = Console.ReadLine();
+        if (confirmacion == "1")
+        {
+            ocultar = true;
+            Pantalla.Escribir(2, 14, "Las citas canceladas serán ocultadas", "verde");
+            Console.ReadKey();
+        }
+        else if (confirmacion == "2")
+        {
+            ocultar = false;
+            Pantalla.Escribir(2, 14, "Las citas canceladas se podrán observar", "verde");
+            Console.ReadKey();
+        }
     }
 
     private static void PedirDatos1aCita(ref string valoracionB)
@@ -226,7 +438,7 @@ class GestorDeCitas
         int minutos = Convert.ToInt32(Pantalla.PedirNormal(62, 12, "Minutos (mm): "));
 
         while ((dia <= 0 || dia > 31) || (mes <= 0 || mes > 12) || (anyo < 2024 || anyo <= 0)
-            || (hora < 8 || hora >= 14) || (minutos < 0 || minutos > 59))
+            || (hora < 8 || hora >= 16) || (minutos < 0 || minutos > 59))
         {
             Pantalla.Escribir(2, 14, "Fecha u hora incorrectas. Inténtelo de nuevo.", "rojo");
             dia = Convert.ToInt32(Pantalla.PedirNormal(2, 12, "Día (dd): "));
@@ -239,167 +451,107 @@ class GestorDeCitas
         idCita = nombreP.Substring(0, 3).ToUpper() + fecha.ToString("d");
     }
 
-    private static void Pantalla1aCita(int indice)
-    {
-        Pantalla.Escribir(2, 14, "Valoración bucal: ", "blanco");
-        if (listaDeCitas[indice] is CitaPrimera citaPrimera)
-            Pantalla.Escribir(20, 14, citaPrimera.ValoracionBucal, "gris");
-    }
-
-    private static void PantallaCitaNormal(int indice)
-    {
-        Pantalla.Escribir(2, 14, "Problemática: ", "blanco");
-        if (listaDeCitas[indice] is CitaNormal citaNormal)
-            Pantalla.Escribir(19, 14, citaNormal.DescripcionProblema, "gris");
-
-        Pantalla.Escribir(2, 16, "Tratamiento: ", "blanco");
-        if (listaDeCitas[indice] is CitaNormal citaNormal2)
-            Pantalla.Escribir(19, 14, citaNormal2.Tratamiento, "gris");
-    }
-
-    private static void RellenoMenu(int indice)
+    private static void RellenoMenu(int indice, bool ocultar, List<Cita> citasConfirmadas)
     {
         DateTime ahora = DateTime.Now;
         string fecha = ahora.ToString("d");
         string hora = ahora.ToString("t");
 
         Pantalla.Ventana(0, 0, 80, 25, "azul");
-        Pantalla.Escribir(2, 2, "Citas (actual: "
-            + (indice + 1) + "/" + listaDeCitas.Count + ")", "blanco");
-        Pantalla.Escribir(30, 2, fecha, "gris");
-        Pantalla.Escribir(50, 2, hora, "gris");
+        if (ocultar == false)
+        {
+            Pantalla.Escribir(2, 2, "Citas (actual: "
+                + (indice + 1) + "/" + lista.CantidadDeCitas() + ")", "blanco");
+        }
+        else
+        {
+            Pantalla.Escribir(2, 2, "Citas (actual: "
+                + (indice + 1) + "/" + citasConfirmadas.Count + ")", "blanco");
+        }
+
+        Pantalla.Escribir(57, 2, fecha, "gris");
+        Pantalla.Escribir(71, 2, hora, "gris");
 
         Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
 
         Pantalla.Escribir(2, 22, "<- Anterior", "blanco");
-        Pantalla.Escribir(20, 22, "-> Siguiente", "blanco");
-        Pantalla.Escribir(40, 22, "1- Añadir", "blanco");
-        Pantalla.Escribir(58, 22, "2- Número", "blanco");
-        Pantalla.Escribir(2, 23, "3- Buscar", "blanco");
-        Pantalla.Escribir(20, 23, "4- Modificar", "blanco");
-        Pantalla.Escribir(40, 23, "5- Eliminar", "blanco");
-        Pantalla.Escribir(58, 23, "S- Volver", "blanco");
+        Pantalla.Escribir(15, 22, "-> Siguiente", "blanco");
+        Pantalla.Escribir(29, 22, "1- Añadir", "blanco");
+        Pantalla.Escribir(40, 22, "2- Número", "blanco");
+        Pantalla.Escribir(51, 22, "3- Horarios", "blanco");
+        Pantalla.Escribir(2, 23, "4- Buscar", "blanco");
+        Pantalla.Escribir(13, 23, "5- Modificar", "blanco");
+        Pantalla.Escribir(27, 23, "6- Cancelar", "blanco");
+        Pantalla.Escribir(40, 23, "7- Config", "blanco");
+        Pantalla.Escribir(51, 23, "S- Volver", "blanco");
     }
 
-    private static void RellenoCabecera(int indice)
+    private static void RellenoCabecera(int indice, bool ocultar, List<Cita> citasConfirmadas)
     {
         DateTime ahora = DateTime.Now;
         string fecha = ahora.ToString("d");
         string hora = ahora.ToString("t");
 
         Pantalla.Ventana(0, 0, 80, 25, "azul");
-        Pantalla.Escribir(2, 2, "Citas (actual: "
-            + (indice + 1) + "/" + listaDeCitas.Count + ")", "blanco");
-        Pantalla.Escribir(30, 2, fecha, "gris");
-        Pantalla.Escribir(50, 2, hora, "gris");
+        if (ocultar == false)
+        {
+            Pantalla.Escribir(2, 2, "Citas (actual: "
+                + (indice + 1) + "/" + lista.CantidadDeCitas() + ")", "blanco");
+        }
+        else
+        {
+            Pantalla.Escribir(2, 2, "Citas (actual: "
+                + (indice + 1) + "/" + citasConfirmadas.Count + ")", "blanco");
+        }
+
+        Pantalla.Escribir(57, 2, fecha, "gris");
+        Pantalla.Escribir(71, 2, hora, "gris");
 
         Pantalla.Escribir(1, 20, new string('─', 78), "blanco");
     }
 
-    private static void ConvertirPacientesYDoctor(ref string nombreP, ref string nombreD,
-        ref Doctor doctor, ref Paciente paciente)
+    private static void MostrarAviso(int indice)
     {
-        foreach (Empleado e in GestorDeEmpleados.listaDeEmpleados)
-        {
-            if (e is Doctor d && d.Nombre.ToLower().Contains(nombreD.ToLower()))
-                doctor = d;
-        }
-        /*foreach (Paciente p in GestorDePacientes.listaDePacientes)
-        {
-            if (p.NombreCompleto.ToLower().Contains(nombreP.ToLower()))
-                paciente = p;
-        }*/
-    }
+        Pantalla.VentanaAviso(20, 8, 40, 10);
+        Pantalla.Escribir((78 - "cancelar cita".Length) / 2 +3, 10, "Cancelar cita", "amarillo");
+        Pantalla.VentanaAviso(21, 14, 19, 3);
+        Pantalla.Escribir(26, 15, "1- Aceptar", "amarillo");
+        Pantalla.VentanaAviso(40, 14, 19, 3);
+        Pantalla.Escribir(45, 15, "S- Volver", "amarillo");
 
-    private static void GuardarCitas()
-    {
-        try
+        string confirmacion = Console.ReadLine();
+        if (confirmacion == "1")
         {
-            StreamWriter f = File.CreateText("Citas.txt");
-            foreach (Cita cita in listaDeCitas)
-            {
-                if (cita is CitaPrimera citaPrimera)
-                {
-                    f.Write(citaPrimera.IdCita + "#");
-                    f.Write(citaPrimera.Paciente.NombreCompleto + "#");
-                    f.Write(citaPrimera.Doctor.Nombre + "#");
-                    f.Write(citaPrimera.Fecha + "#");
-                    f.Write(citaPrimera.ValoracionBucal);
-                }
-                else if (cita is CitaNormal citaNormal)
-                {
-                    f.Write(citaNormal.IdCita + "#");
-                    f.Write(citaNormal.Paciente.NombreCompleto + "#");
-                    f.Write(citaNormal.Doctor.Nombre + "#");
-                    f.Write(citaNormal.Fecha + "#");
-                    f.Write(citaNormal.DescripcionProblema + "#");
-                    f.Write(citaNormal.Tratamiento);
-                }   
-            }
-            f.Close();
+            lista.Cancelar(lista.Obtener(indice));
+            Pantalla.Escribir((78-"Cita cancelada correctamente".Length)/2,
+                13, "Cita cancelada correctamente", "cian");
+            Console.ReadKey();
         }
-        catch (PathTooLongException)
-        {
-            Console.WriteLine("La ruta del fichero es demasiado larga.");
-        }
-        catch (IOException e)
-        {
-            Console.WriteLine("Error de escritura: " + e.Message);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error general: " + e.Message);
-        }
-    }
+        Pantalla.BorrarVentanaAviso(20, 8, 40, 10);
+        Pantalla.Escribir(2, 8, "Paciente: ", "blanco");
+        Pantalla.Escribir(20, 8, lista.Obtener(indice).Paciente.NombreCompleto, "gris");
+        Pantalla.Escribir(2, 10, "Doctor: ", "blanco");
+        Pantalla.Escribir(20, 10, lista.Obtener(indice).Doctor.Nombre, "gris");
+        Pantalla.Escribir(2, 12, "Fecha: ", "blanco");
+        Pantalla.Escribir(20, 12, lista.Obtener(indice).Fecha.ToString("g"), "gris");
+        Pantalla.Escribir(2, 14, "Estado: ", "blanco");
+        Pantalla.Escribir(20, 14, lista.Obtener(indice).Cancelada ? "Cancelada" : "Confirmada", "gris");
 
-    public static void CargarCitas()
-    {
-        if (File.Exists("Citas.txt"))
+        if (lista.Obtener(indice) is CitaPrimera)
         {
-            try
-            {
-                string linea;
-                StreamReader f = File.OpenText("Citas.txt");
-                Doctor doctor = null;
-                Paciente paciente = null;
-                do
-                {
-                    linea = f.ReadLine();
-                    if (linea != null)
-                    {
-                        string[] trozos = linea.Split('#');
-                        ConvertirPacientesYDoctor(ref trozos[1], ref trozos[2], 
-                            ref doctor, ref paciente);
+            Pantalla.Escribir(2, 16, "Valoración bucal: ", "blanco");
+            if (lista.Obtener(indice) is CitaPrimera citaPrimera)
+                Pantalla.Escribir(20, 16, citaPrimera.ValoracionBucal, "gris");
+        }
+        else if (lista.Obtener(indice) is CitaNormal)
+        {
+            Pantalla.Escribir(2, 16, "Problemática: ", "blanco");
+            if (lista.Obtener(indice) is CitaNormal citaNormal)
+                Pantalla.Escribir(19, 16, citaNormal.DescripcionProblema, "gris");
 
-                        if (trozos.Length == 5)
-                        {
-                            Cita cita1a = new CitaPrimera(trozos[0], paciente,
-                                doctor, Convert.ToDateTime(trozos[3]), trozos[4]);
-                            listaDeCitas.Add(cita1a);
-                        }
-                        else if (trozos.Length == 6)
-                        {
-                            Cita citaNormal = new CitaNormal(trozos[0], paciente,
-                                doctor, Convert.ToDateTime(trozos[3]), trozos[4],
-                                trozos[5]);
-                            listaDeCitas.Add(citaNormal);
-                        }
-                    }
-                } while (linea != null);
-                f.Close();
-            }
-            catch (PathTooLongException)
-            {
-                Console.WriteLine("La ruta del fichero es demasiado larga.");
-            }
-            catch (IOException e)
-            {
-                Console.WriteLine("Error de lectura: " + e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error general: " + e.Message);
-            }
+            Pantalla.Escribir(2, 18, "Tratamiento: ", "blanco");
+            if (lista.Obtener(indice) is CitaNormal citaNormal2)
+                Pantalla.Escribir(19, 18, citaNormal2.Tratamiento, "gris");
         }
     }
 }

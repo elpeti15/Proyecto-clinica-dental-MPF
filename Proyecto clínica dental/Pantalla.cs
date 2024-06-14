@@ -33,6 +33,7 @@ class Pantalla
         Console.Write(texto);
 
         Console.ForegroundColor = colorOriginal;
+        Console.BackgroundColor = colorOriginalFondo; //cambio
     }
 
     public static string PedirNormal(int x, int y, string texto)
@@ -156,5 +157,52 @@ class Pantalla
             }
         }
         Console.BackgroundColor = colorOriginalFondo;
+    }
+
+    public static void VentanaAviso(int x, int y, int ancho, int alto)
+    {
+        Console.BackgroundColor = colores["azul"];
+        Console.ForegroundColor = colores["cian"];
+        Console.SetCursorPosition(x, y);
+        Console.Write("╔");
+        Console.SetCursorPosition(x + ancho - 1, y);
+        Console.Write("╗");
+        Console.SetCursorPosition(x, y + alto - 1);
+        Console.Write("╚");
+        Console.SetCursorPosition(x + ancho - 1, y + alto - 1);
+        Console.Write("╝");
+        for (int i = 1; i < ancho - 1; i++)
+        {
+            Console.SetCursorPosition(x + i, y);
+            Console.Write("═");
+            Console.SetCursorPosition(x + i, y + alto - 1);
+            Console.Write("═");
+        }
+        for (int i = 1; i < alto - 1; i++)
+        {
+            Console.SetCursorPosition(x, y + i);
+            Console.Write("║");
+            Console.SetCursorPosition(x + ancho - 1, y + i);
+            Console.Write("║");
+
+            for (int j = 1; j < ancho - 1; j++)
+            {
+                Console.SetCursorPosition(x + j, y + i);
+                Console.Write(" ");
+            }
+        }  
+    }
+
+    public static void BorrarVentanaAviso(int x, int y, int ancho, int alto)
+    {
+        Console.BackgroundColor = colores["azul"];
+        for (int i = 0; i < alto; i++)
+        {
+            for (int j = 0; j < ancho; j++)
+            {
+                Console.SetCursorPosition(x + j, y + i);
+                Console.Write(" ");
+            }
+        }
     }
 }

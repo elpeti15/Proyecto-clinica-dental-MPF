@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Diagnostics;
 
-class Cita : IComparable<Cita>
+abstract class Cita : IComparable<Cita>
 {
     public string IdCita { get; set; }
     public Paciente Paciente { get; set; }
     public Doctor Doctor { get; set; }
     public DateTime Fecha { get; set; }
+    public bool Cancelada { get; set; }
 
-    public Cita(string idCita, Paciente paciente, Doctor doctor, DateTime fecha)
+    public Cita(string idCita, Paciente paciente, Doctor doctor, DateTime fecha, bool cancelada)
     {
         IdCita = idCita;
         Paciente = paciente;
         Doctor = doctor;
         Fecha = fecha;
+        Cancelada = cancelada;
     }
 
     public int CompareTo(Cita otra)
@@ -30,8 +32,7 @@ class Cita : IComparable<Cita>
 
     public override string ToString()
     {
-        return IdCita + " - " + Paciente.NombreCompleto 
-            + " - " + Doctor.Nombre + " - " + Fecha.ToString("g");
+        return Paciente.NombreCompleto + " - " + Fecha.ToString("g");
     }
 
     public bool Contiene(string texto)
@@ -44,3 +45,39 @@ class Cita : IComparable<Cita>
     }
 }
 
+class CitaNormal : Cita
+{
+    public string DescripcionProblema { get; set; }
+    public string Tratamiento { get; set; }
+
+    public CitaNormal(string idCita, Paciente paciente, Doctor doctor,
+        DateTime fecha, bool cancelada, string descripcionProblema, string tratamiento)
+        : base(idCita, paciente, doctor, fecha, cancelada)
+    {
+        DescripcionProblema = descripcionProblema;
+        Tratamiento = tratamiento;
+    }
+
+    public override string ToString()
+    {
+        return base.ToString() + " - " + DescripcionProblema
+            + " (" + Tratamiento + ")";
+    }
+}
+
+class CitaPrimera : Cita
+{
+    public string ValoracionBucal { get; set; }
+
+    public CitaPrimera(string idCita, Paciente paciente,
+        Doctor doctor, DateTime fecha, bool cancelada, string valoracionBucal)
+        : base(idCita, paciente, doctor, fecha, cancelada)
+    {
+        ValoracionBucal = valoracionBucal;
+    }
+
+    public override string ToString()
+    {
+        return base.ToString() + " (" + ValoracionBucal + ")";
+    }
+}
